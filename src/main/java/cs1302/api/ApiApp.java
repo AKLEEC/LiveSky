@@ -86,7 +86,7 @@ public class ApiApp extends Application {
         .addAll(logo, directions, searchBar, searchButton);
 
         EventHandler<ActionEvent> searchClicked = (ActionEvent e) -> {
-            this.getCoordinates("Athens");
+            this.getCoordinates(searchBar.getText());
         };
         searchButton.setOnAction(searchClicked);
     }
@@ -120,7 +120,7 @@ public class ApiApp extends Application {
 
     } // start
 
-    private void getCoordinates(String city) {
+    private double[] getCoordinates(String city) {
         city = URLEncoder.encode(city, StandardCharsets.UTF_8);
         String coordQuery = String.format("city=%s", city);
         String coordUri = "https://api.api-ninjas.com/v1/geocoding?" + coordQuery;
@@ -134,10 +134,17 @@ public class ApiApp extends Application {
             
             // send request & recieve response
             HttpResponse<String> response = HTTP_CLIENT.send(request, BodyHandlers.ofString());
-            System.out.println(response.body());
+            String jsonString = response.body();
+            System.out.println(jsonString);
             //ensure request is ok
+
+            GeocodingResponse[] geocodingResponse = GSON.fromJson(jsonString, GeocodingResponse[].class);
+            double[] coordinates = {geocodingResponse[0].latitude, geocodingResponse[0].longitude};
+            return coordinates;
+
         } catch (IllegalArgumentException | IOException | InterruptedException e) {
             directions.setText("Last attempt to get weather failed...");
+            return null;
         }
 
     }
