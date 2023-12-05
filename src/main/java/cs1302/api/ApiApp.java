@@ -2,6 +2,7 @@ package cs1302.api;
 
 import javafx.application.Application;
 import javafx.application.Platform;
+import javafx.geometry.Insets;
 import javafx.geometry.Orientation;
 import javafx.geometry.Pos;
 import javafx.scene.control.Label;
@@ -10,7 +11,13 @@ import javafx.scene.control.TextField;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.layout.VBox;
+import javafx.scene.paint.Color;
+import javafx.scene.text.Font;
+import javafx.scene.layout.Background;
+import javafx.scene.layout.BackgroundFill;
+import javafx.scene.layout.CornerRadii;
 import javafx.scene.layout.HBox;
+import javafx.scene.layout.Priority;
 import javafx.scene.Scene;
 import javafx.stage.Stage;
 import javafx.scene.control.Separator;
@@ -40,20 +47,6 @@ import java.nio.file.Paths;
  */
 public class ApiApp extends Application {
 
-    private static String[] getApiKeys() {
-        try (FileInputStream configFileStream = new FileInputStream("resources/config.properties")) {
-            Properties config = new Properties();
-            config.load(configFileStream);
-            String geocodingKey = config.getProperty("geocoding.apikey");         // get geocoding api key
-            String weatherKey = config.getProperty("weather.apikey"); // get weather api key
-            return new String[] {geocodingKey,weatherKey};
-        } catch (IOException ioe) {
-            System.err.println(ioe);
-            ioe.printStackTrace();
-            return null;
-        } // try
-    }
-
     /* HTTP Client */
     public static final HttpClient HTTP_CLIENT = HttpClient.newBuilder()
         .version(HttpClient.Version.HTTP_2)
@@ -73,6 +66,7 @@ public class ApiApp extends Application {
 
     // left side of app
     VBox leftMenu;
+    ImageView logoImg;
     Button logo;
     Label directions;
     TextField searchBar;
@@ -80,24 +74,27 @@ public class ApiApp extends Application {
 
     // right side of app
     VBox rightResult;
-    WebView webView;
-    WebEngine webEngine;
-    ImageView weatherIcon;
+   // HBox cityBox;
+    Label cityLabel;
+    HBox webViewIconBox;
+    WebView webViewIcon;
+    WebEngine webEngineIcon;
+    HBox temperatureBox;
+    Label temp;
 
     /**
      * Constructs an {@code ApiApp} object. This default (i.e., no argument)
      * constructor is executed in Step 2 of the JavaFX Application Life-Cycle.
      */
     public ApiApp() {
-        root = new HBox(8);
+        this.stage = null;
+        this.scene = null;
+        this.root = new HBox(8);
         root.setStyle("-fx-background-color: white;");
 
         // left side of app
         leftMenu = new VBox(5);
-        leftMenu.setAlignment(Pos.CENTER);
-        ImageView logoImg = new ImageView(new Image("file:resources/logo.png"));
-        logoImg.setPreserveRatio(true);
-        logoImg.setFitWidth(100);
+        logoImg = new ImageView(new Image("file:resources/logo.png"));
         logo = new Button("", logoImg);
         directions = new Label("Enter a city to see the current weather");
         searchBar = new TextField("Seoul");
@@ -106,10 +103,13 @@ public class ApiApp extends Application {
         divider = new Separator(Orientation.VERTICAL);
 
         // right side of app
-        rightResult = new VBox(5);
-        webView = new WebView();
-        webEngine = webView.getEngine();
-        rightResult.setAlignment(Pos.TOP_CENTER);
+        rightResult = new VBox();
+        cityLabel = new Label("CITY");
+        webViewIcon = new WebView();
+        webViewIconBox = new HBox(webViewIcon);
+        webViewIconBox.setAlignment(Pos.TOP_CENTER);        
+        temp = new Label();
+        temperatureBox = new HBox(temp);
     } // ApiApp
 
     String svgContent = "";
@@ -117,17 +117,37 @@ public class ApiApp extends Application {
     /** {@inheritDoc} */
     @Override
     public void init() {
+        webEngineIcon = webViewIcon.getEngine();
+        logoImg.setPreserveRatio(true);
+        logoImg.setFitWidth(100);
+
+        // build hierarchy
         leftMenu.getChildren()
-            .addAll(logo, directions, searchBar, searchButton);
-        rightResult.getChildren()
-            .addAll(webView);
+            .addAll(logo, directions, searchBar, searchButton);       
+        rightResult.getChildren().addAll(cityLabel, webViewIconBox, temperatureBox);
+        root.getChildren().addAll(leftMenu, divider, rightResult);
+        
+        leftMenu.setAlignment(Pos.CENTER);
+        rightResult.setAlignment(Pos.TOP_CENTER); 
+        temperatureBox.setAlignment(Pos.TOP_CENTER);
+
+
+        webViewIconBox.setMaxSize(190, 190);
+        VBox.setVgrow(webViewIconBox, Priority.ALWAYS);
+        temperatureBox.setMaxHeight(temp.getHeight());
+        cityLabel.setPadding(new Insets(-10, 0, -20, 0));
+
+        /* 
+        rightResult.setBackground(new Background(new BackgroundFill(Color.BLUE, CornerRadii.EMPTY, Insets.EMPTY)));
+        webViewIconBox.setBackground(new Background(new BackgroundFill(Color.RED, CornerRadii.EMPTY, Insets.EMPTY)));
+        svgContent = readSvgContent("resources/openweathermap/01d.svg");
+        Platform.runLater(() -> webEngineIcon.loadContent(svgContent));    
+        temperatureBox.setBackground(new Background(new BackgroundFill(Color.GREEN, CornerRadii.EMPTY, Insets.EMPTY)));
+        */
 
         // weather icon functionality
-        rightResult.setMinWidth(1280 - leftMenu.getWidth() - 200);
-        webView.setMaxWidth(210);
-        webView.setMaxHeight(220);
-        svgContent = readSvgContent("resources/openweathermap/02d.svg");
-        Platform.runLater(() -> webEngine.loadContent(svgContent));
+        rightResult.setMinWidth(1280 - leftMenu.getWidth() - 200);        
+        Platform.runLater(() -> webEngineIcon.setUserStyleSheetLocation("file:resources/style.css"));
 
         // search button functionality
         EventHandler<ActionEvent> searchClicked = (ActionEvent e) -> {
@@ -157,6 +177,8 @@ public class ApiApp extends Application {
             * TODO: ensure request is ok 
             */
             GeocodingResponse[] geocodingResponse = GSON.fromJson(jsonString, GeocodingResponse[].class);
+            cityLabel.setText(geocodingResponse[0].name);
+            cityLabel.setFont(new Font(75));
             double[] coordinates = {geocodingResponse[0].latitude, geocodingResponse[0].longitude};
             return coordinates;
         } catch (IllegalArgumentException | IOException | InterruptedException e) {
@@ -184,13 +206,15 @@ public class ApiApp extends Application {
             String jsonString = response.body();
             System.out.println(jsonString);
             /**
-            * TODO: ensure request is ok 
+             * TODO: ensure request is ok 
             */
 
             WeatherApiResponse weatherResponse = GSON.fromJson(jsonString, WeatherApiResponse.class);
             String icon = weatherResponse.weather[0].icon + ".svg";
             svgContent = readSvgContent("resources/openweathermap/" + icon);
-            Platform.runLater(() -> webEngine.loadContent(svgContent)); 
+            Platform.runLater(() -> webEngineIcon.loadContent(svgContent));
+            temp.setText("" + weatherResponse.main.temp);
+            temp.setFont(new Font(40));
         } catch (IllegalArgumentException | IOException | InterruptedException e) {
             directions.setText("Last attempt to get weather failed...");
         }
@@ -203,9 +227,8 @@ public class ApiApp extends Application {
     @Override
     public void start(Stage stage) {
         this.stage = stage;
-
+    
         // setup scene
-        root.getChildren().addAll(leftMenu, divider, rightResult);
         scene = new Scene(root, 1280, 720);
 
         // setup stage
@@ -214,6 +237,7 @@ public class ApiApp extends Application {
         stage.setOnCloseRequest(event -> Platform.exit());
         stage.sizeToScene();
         stage.show();
+        Platform.runLater(() -> this.stage.setResizable(false));
     } // start
 
     private String readSvgContent(String filePath) {
@@ -223,5 +247,19 @@ public class ApiApp extends Application {
             e.printStackTrace();
             return "";
         }
+    }
+
+    private static String[] getApiKeys() {
+        try (FileInputStream configFileStream = new FileInputStream("resources/config.properties")) {
+            Properties config = new Properties();
+            config.load(configFileStream);
+            String geocodingKey = config.getProperty("geocoding.apikey"); // get geocoding api key
+            String weatherKey = config.getProperty("weather.apikey"); // get weather api key
+            return new String[] {geocodingKey,weatherKey};
+        } catch (IOException ioe) {
+            System.err.println(ioe);
+            ioe.printStackTrace();
+            return null;
+        } // try
     }
 } // ApiApp
