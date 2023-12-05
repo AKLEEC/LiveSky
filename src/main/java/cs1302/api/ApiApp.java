@@ -79,8 +79,11 @@ public class ApiApp extends Application {
     HBox webViewIconBox;
     WebView webViewIcon;
     WebEngine webEngineIcon;
+    VBox informationBox;
+    Label tempDescription;
     HBox temperatureBox;
     Label temp;
+    Label feelsLikeTemp;
 
     /**
      * Constructs an {@code ApiApp} object. This default (i.e., no argument)
@@ -109,7 +112,10 @@ public class ApiApp extends Application {
         webViewIconBox = new HBox(webViewIcon);
         webViewIconBox.setAlignment(Pos.TOP_CENTER);        
         temp = new Label();
-        temperatureBox = new HBox(temp);
+        feelsLikeTemp = new Label();
+        temperatureBox = new HBox(8, temp, feelsLikeTemp);
+        tempDescription = new Label();
+        informationBox = new VBox(tempDescription, temperatureBox);
     } // ApiApp
 
     String svgContent = "";
@@ -124,13 +130,13 @@ public class ApiApp extends Application {
         // build hierarchy
         leftMenu.getChildren()
             .addAll(logo, directions, searchBar, searchButton);       
-        rightResult.getChildren().addAll(cityLabel, webViewIconBox, temperatureBox);
+        rightResult.getChildren().addAll(cityLabel, webViewIconBox, informationBox);
         root.getChildren().addAll(leftMenu, divider, rightResult);
         
         leftMenu.setAlignment(Pos.CENTER);
         rightResult.setAlignment(Pos.TOP_CENTER); 
-        temperatureBox.setAlignment(Pos.TOP_CENTER);
-
+        informationBox.setAlignment(Pos.TOP_CENTER);
+        temperatureBox.setAlignment(Pos.BOTTOM_CENTER);
 
         webViewIconBox.setMaxSize(190, 190);
         VBox.setVgrow(webViewIconBox, Priority.ALWAYS);
@@ -172,11 +178,11 @@ public class ApiApp extends Application {
             // send request & recieve response
             HttpResponse<String> response = HTTP_CLIENT.send(request, BodyHandlers.ofString());
             String jsonString = response.body();
-            System.out.println(jsonString);
             /**
             * TODO: ensure request is ok 
             */
             GeocodingResponse[] geocodingResponse = GSON.fromJson(jsonString, GeocodingResponse[].class);
+            System.out.println(GSON.toJson(geocodingResponse[0]));
             cityLabel.setText(geocodingResponse[0].name);
             cityLabel.setFont(new Font(75));
             double[] coordinates = {geocodingResponse[0].latitude, geocodingResponse[0].longitude};
@@ -204,22 +210,28 @@ public class ApiApp extends Application {
             // send request & recieve response
             HttpResponse<String> response = HTTP_CLIENT.send(request, BodyHandlers.ofString());
             String jsonString = response.body();
-            System.out.println(jsonString);
             /**
              * TODO: ensure request is ok 
             */
 
             WeatherApiResponse weatherResponse = GSON.fromJson(jsonString, WeatherApiResponse.class);
+            System.out.println(GSON.toJson(weatherResponse));
             String icon = weatherResponse.weather[0].icon + ".svg";
             svgContent = readSvgContent("resources/openweathermap/" + icon);
             Platform.runLater(() -> webEngineIcon.loadContent(svgContent));
-            temp.setText("" + weatherResponse.main.temp);
-            temp.setFont(new Font(40));
+            tempDescription.setText(weatherResponse.weather[0].description);
+            tempDescription.setFont(new Font("Comic Sans MS", 35));
+            tempDescription.setOpacity(0.8);
+            temp.setText((int)(Math.round(weatherResponse.main.temp)) + "°F");
+            temp.setFont(new Font(50));
+            feelsLikeTemp.setText("feel like: " + (int)(Math.round(weatherResponse.main.feels_like)) + "°F");
+            feelsLikeTemp.setFont(new Font(20));
+            feelsLikeTemp.setOpacity(0.7);
         } catch (IllegalArgumentException | IOException | InterruptedException e) {
             directions.setText("Last attempt to get weather failed...");
         }
     }
-
+    
     /**
      * * String date = new java.text.SimpleDateFormat("MM/dd/yyyy HH:mm:ss").format(new java.util.Date(epoch * 1000))
      */
