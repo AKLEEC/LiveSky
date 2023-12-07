@@ -41,7 +41,9 @@ import javafx.scene.web.WebView;
 import javafx.scene.web.WebEngine;
 import java.nio.file.Files;
 import java.nio.file.Paths;
-
+/*
+ * TODO: error handling, catching no results
+ */
 /**
  * REPLACE WITH NON-SHOUTING DESCRIPTION OF YOUR APP.
  */
@@ -106,7 +108,7 @@ public class ApiApp extends Application {
         countrySearchBar = new TextField();
         searchButton = new Button("Search");
         leftMenu = new VBox(5,
-            logo, directions, citySearchBar, stateSearchBar, countrySearchBar, searchButton);
+            logo, directions, citySearchBar, countrySearchBar, stateSearchBar, searchButton);
         divider = new Separator(Orientation.VERTICAL);
 
         // right side of app
@@ -131,15 +133,15 @@ public class ApiApp extends Application {
         directions.setWrapText(true);
         cityLabel.setWrapText(true);
         citySearchBar.setPromptText("City (required)");
-        stateSearchBar.setPromptText("State (optional, US only)");
-        countrySearchBar.setPromptText("Country (optional)");
+        stateSearchBar.setPromptText("State (available if country is \"US\")"); //"State (optional, US only)"
+        countrySearchBar.setPromptText("Country (optional - US)");
         webEngineIcon = webViewIcon.getEngine();
         logoImg.setPreserveRatio(true);
         logoImg.setFitWidth(100);
         searchButton.setDisable(true);
 
-        rightResult.setBackground(new Background(new BackgroundFill(Color.RED, CornerRadii.EMPTY, Insets.EMPTY)));
-        cityBox.setBackground(new Background(new BackgroundFill(Color.BLUE, CornerRadii.EMPTY, Insets.EMPTY)));
+        stateSearchBar.setDisable(true);
+        
         // build hierarchy
         root.getChildren().addAll(leftMenu, divider, rightResult);
         HBox.setHgrow(rightResult, Priority.ALWAYS);
@@ -152,8 +154,6 @@ public class ApiApp extends Application {
         webViewIconBox.setMaxSize(190, 190);
         VBox.setVgrow(webViewIconBox, Priority.ALWAYS);
         temperatureBox.setMaxHeight(temp.getHeight());
-        cityBox.setMaxWidth(650);
-        //cityLabel.setPadding(new Insets(-20, 0, 0, 0));
         HBox.setMargin(feelsLikeTemp, new Insets(0, 0, 10,0));
         // weather icon functionality
         Platform.runLater(() -> webEngineIcon.setUserStyleSheetLocation("file:resources/style.css"));
@@ -172,6 +172,14 @@ public class ApiApp extends Application {
                 searchButton.setDisable(false);
             } else if (!oldText.equals("") && newText.equals("")) {
                 searchButton.setDisable(true);
+            }
+        });
+        countrySearchBar.textProperty().addListener((observable, oldText, newText) -> {
+            if (newText.equalsIgnoreCase("US")) {
+                stateSearchBar.setDisable(false);
+            } else {
+                stateSearchBar.setDisable(true);
+                stateSearchBar.setText("");
             }
         });
     }
@@ -205,8 +213,13 @@ public class ApiApp extends Application {
              */
             GeocodingResponse[] geocodingResponse = GSON.fromJson(jsonString, GeocodingResponse[].class);
             System.out.println(GSON.toJson(geocodingResponse[0]));
-            cityLabel.setFont(new Font(75));
             cityLabel.setText(geocodingResponse[0].name);
+            if (geocodingResponse[0].name.length() < 10) {
+                cityLabel.setFont(new Font(75)); 
+            } else {
+                cityLabel.setFont(new Font(40));
+            }
+
             double[] coordinates = {geocodingResponse[0].latitude, geocodingResponse[0].longitude};
             return coordinates;
         } catch (IllegalArgumentException | IOException | InterruptedException e) {
@@ -246,7 +259,7 @@ public class ApiApp extends Application {
             tempDescription.setOpacity(0.8);
             temp.setText((int)(Math.round(weatherResponse.main.temp)) + "°F");
             temp.setFont(new Font(50));
-            feelsLikeTemp.setText("feel like: " + (int)(Math.round(weatherResponse.main.feels_like)) + "°F");
+            feelsLikeTemp.setText("feels like: " + (int)(Math.round(weatherResponse.main.feels_like)) + "°F");
             feelsLikeTemp.setFont(new Font(20));
             feelsLikeTemp.setOpacity(0.7);
         } catch (IllegalArgumentException | IOException | InterruptedException e) {
