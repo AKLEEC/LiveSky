@@ -13,11 +13,7 @@ import javafx.scene.control.TextField;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.layout.VBox;
-import javafx.scene.paint.Color;
 import javafx.scene.text.Font;
-import javafx.scene.layout.Background;
-import javafx.scene.layout.BackgroundFill;
-import javafx.scene.layout.CornerRadii;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.Scene;
@@ -42,16 +38,11 @@ import java.io.IOException;
 import java.net.URI;
 import javafx.scene.web.WebView;
 import javafx.scene.web.WebEngine;
-import java.nio.file.Files;
-import java.nio.file.Paths;
-/*
- * TODO: error handling, catching no results
- */
+
 /**
  * REPLACE WITH NON-SHOUTING DESCRIPTION OF YOUR APP.
  */
 public class ApiApp extends Application {
-
     /* HTTP Client */
     public static final HttpClient HTTP_CLIENT = HttpClient.newBuilder()
         .version(HttpClient.Version.HTTP_2)
@@ -72,7 +63,6 @@ public class ApiApp extends Application {
     // left side of app
     VBox leftMenu;
     ImageView logoImg;
-    Button logo;
     Label directions;
     TextField citySearchBar;
     TextField stateSearchBar;
@@ -104,14 +94,13 @@ public class ApiApp extends Application {
 
         // left side of app
         logoImg = new ImageView(new Image("file:resources/logo.png"));
-        logo = new Button("", logoImg);
         directions = new Label("  Enter a city to see the current weather");
         citySearchBar = new TextField();
         stateSearchBar = new TextField();
         countrySearchBar = new TextField();
         searchButton = new Button("Search");
         leftMenu = new VBox(5,
-            logo, directions, citySearchBar, countrySearchBar, stateSearchBar, searchButton);
+            logoImg, directions, citySearchBar, countrySearchBar, stateSearchBar, searchButton);
         divider = new Separator(Orientation.VERTICAL);
 
         // right side of app
@@ -164,8 +153,9 @@ public class ApiApp extends Application {
 
         // search button functionality
         EventHandler<ActionEvent> searchClicked = (ActionEvent e) -> {
+            directions.setText("  Getting Results...");
             String[] location = {citySearchBar.getText(), stateSearchBar.getText(), countrySearchBar.getText()};
-            this.getWeather(this.getCoordinates(location[0], location[1], location[2]));
+            runNow(() -> this.getWeather(this.getCoordinates(location[0], location[1], location[2])));
         };
         searchButton.setOnAction(searchClicked);
 
@@ -252,7 +242,7 @@ public class ApiApp extends Application {
             String jsonString = response.body();
             /**
              * TODO: ensure request is ok 
-            */
+             */
 
             WeatherApiResponse weatherResponse = GSON.fromJson(jsonString, WeatherApiResponse.class);
             System.out.println(GSON.toJson(weatherResponse));
@@ -267,6 +257,7 @@ public class ApiApp extends Application {
             feelsLikeTemp.setText("feels like: " + (int)(Math.round(weatherResponse.main.feels_like)) + "°F");
             feelsLikeTemp.setFont(new Font(20));
             feelsLikeTemp.setOpacity(0.7);
+            directions.setText("  Enter a city to see the current weather");
         } catch (IllegalArgumentException | IOException | InterruptedException e) {
             directions.setText("Last attempt to get weather failed...");
             alertError(e);
@@ -278,9 +269,9 @@ public class ApiApp extends Application {
     public void start(Stage stage) {
         System.out.println(rightResult.getPrefWidth());
         this.stage = stage;
-    
+        
         // setup scene
-        scene = new Scene(root, 1080, 720);
+        scene = new Scene(root, 1080, 650);
 
         // setup stage
         stage.setTitle("ApiApp!");      
