@@ -6,6 +6,8 @@ import javafx.geometry.Insets;
 import javafx.geometry.Orientation;
 import javafx.geometry.Pos;
 import javafx.scene.control.Label;
+import javafx.scene.control.Alert;
+import javafx.scene.control.Alert.AlertType;
 import javafx.scene.control.Button;
 import javafx.scene.control.TextField;
 import javafx.scene.image.Image;
@@ -21,6 +23,7 @@ import javafx.scene.layout.Priority;
 import javafx.scene.Scene;
 import javafx.stage.Stage;
 import javafx.scene.control.Separator;
+import javafx.scene.control.TextArea;
 import javafx.event.EventHandler;
 import javafx.event.ActionEvent;
 import java.net.URLEncoder;
@@ -196,7 +199,6 @@ public class ApiApp extends Application {
             coordQuery += String.format("&country=%s", country);
         }
         String coordUri = "https://api.api-ninjas.com/v1/geocoding?" + coordQuery;
-
         try {
             // build request
             HttpRequest request = HttpRequest.newBuilder()
@@ -209,9 +211,12 @@ public class ApiApp extends Application {
             String jsonString = response.body();
             System.out.println(jsonString);
             /**
-             * TODO: ensure request is ok 
+             * TODO: ensure request is ok
              */
             GeocodingResponse[] geocodingResponse = GSON.fromJson(jsonString, GeocodingResponse[].class);
+            if (geocodingResponse.length == 0) {
+                throw new IllegalArgumentException("No results found");
+            }
             System.out.println(GSON.toJson(geocodingResponse[0]));
             cityLabel.setText(geocodingResponse[0].name);
             if (geocodingResponse[0].name.length() < 10) {
@@ -219,24 +224,24 @@ public class ApiApp extends Application {
             } else {
                 cityLabel.setFont(new Font(40));
             }
-
             double[] coordinates = {geocodingResponse[0].latitude, geocodingResponse[0].longitude};
             return coordinates;
         } catch (IllegalArgumentException | IOException | InterruptedException e) {
-            directions.setText("Last attempt to get weather failed...");
             return null;
         }
     } // getCoordinates
     
     private void getWeather(double[] coordinates) {
-        String latitude = URLEncoder.encode("" + coordinates[0], StandardCharsets.UTF_8);
-        String longitude = URLEncoder.encode("" + coordinates[1], StandardCharsets.UTF_8);
-        String units = URLEncoder.encode("imperial", StandardCharsets.UTF_8);
-        String apiKey = getApiKeys()[1];
-        String coordQuery = String.format("lat=%s&lon=%s&appid=%s&units=%s", latitude, longitude, apiKey, units);
-        String coordUri = "https://api.openweathermap.org/data/2.5/weather?" + coordQuery;
-
         try {
+            if (coordinates == null) {
+                throw new IllegalArgumentException("No results found");
+            }
+            String latitude = URLEncoder.encode("" + coordinates[0], StandardCharsets.UTF_8);
+            String longitude = URLEncoder.encode("" + coordinates[1], StandardCharsets.UTF_8);
+            String units = URLEncoder.encode("imperial", StandardCharsets.UTF_8);
+            String apiKey = getApiKeys()[1];
+            String coordQuery = String.format("lat=%s&lon=%s&appid=%s&units=%s", latitude, longitude, apiKey, units);
+            String coordUri = "https://api.openweathermap.org/data/2.5/weather?" + coordQuery;
             // build request
             HttpRequest request = HttpRequest.newBuilder()
                 .uri(URI.create(coordUri))
@@ -264,12 +269,10 @@ public class ApiApp extends Application {
             feelsLikeTemp.setOpacity(0.7);
         } catch (IllegalArgumentException | IOException | InterruptedException e) {
             directions.setText("Last attempt to get weather failed...");
+            alertError(e);
         }
     }
     
-    /**
-     * * String date = new java.text.SimpleDateFormat("MM/dd/yyyy HH:mm:ss").format(new java.util.Date(epoch * 1000))
-     */
     /** {@inheritDoc} */
     @Override
     public void start(Stage stage) {
@@ -296,6 +299,20 @@ public class ApiApp extends Application {
             return "";
         }
     }
+
+    /**
+     * Show a modal error alert based on {@code cause}.
+     * @param cause a {@link java.lang.Throwable Throwable} that caused the alert
+     */
+    public void alertError(Throwable cause) {
+        TextArea text = new TextArea();
+        text.appendText("\n\nException: " + cause.toString());
+        text.setEditable(false);
+        Alert alert = new Alert(AlertType.ERROR);
+        alert.getDialogPane().setContent(text);
+        alert.setResizable(true);
+        alert.showAndWait();
+    } // alertError
 
     private static String[] getApiKeys() {
         try (FileInputStream configFileStream = new FileInputStream("resources/config.properties")) {
