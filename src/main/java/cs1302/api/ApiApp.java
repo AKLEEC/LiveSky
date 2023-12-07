@@ -69,12 +69,14 @@ public class ApiApp extends Application {
     ImageView logoImg;
     Button logo;
     Label directions;
-    TextField searchBar;
+    TextField citySearchBar;
+    TextField stateSearchBar;
+    TextField countrySearchBar;
     Button searchButton;
 
     // right side of app
     VBox rightResult;
-   // HBox cityBox;
+    HBox cityBox;
     Label cityLabel;
     HBox webViewIconBox;
     WebView webViewIcon;
@@ -96,18 +98,20 @@ public class ApiApp extends Application {
         root.setStyle("-fx-background-color: white;");
 
         // left side of app
-        leftMenu = new VBox(5);
         logoImg = new ImageView(new Image("file:resources/logo.png"));
         logo = new Button("", logoImg);
-        directions = new Label("Enter a city to see the current weather");
-        searchBar = new TextField("Seoul");
+        directions = new Label("  Enter a city to see the current weather");
+        citySearchBar = new TextField();
+        stateSearchBar = new TextField();
+        countrySearchBar = new TextField();
         searchButton = new Button("Search");
-
+        leftMenu = new VBox(5,
+            logo, directions, citySearchBar, stateSearchBar, countrySearchBar, searchButton);
         divider = new Separator(Orientation.VERTICAL);
 
         // right side of app
-        rightResult = new VBox();
-        cityLabel = new Label("CITY");
+        cityLabel = new Label();
+        cityBox = new HBox(cityLabel);
         webViewIcon = new WebView();
         webViewIconBox = new HBox(webViewIcon);
         webViewIconBox.setAlignment(Pos.TOP_CENTER);        
@@ -116,6 +120,7 @@ public class ApiApp extends Application {
         temperatureBox = new HBox(8, temp, feelsLikeTemp);
         tempDescription = new Label();
         informationBox = new VBox(tempDescription, temperatureBox);
+        rightResult = new VBox(cityBox, webViewIconBox, informationBox);
     } // ApiApp
 
     String svgContent = "";
@@ -123,49 +128,65 @@ public class ApiApp extends Application {
     /** {@inheritDoc} */
     @Override
     public void init() {
+        directions.setWrapText(true);
+        cityLabel.setWrapText(true);
+        citySearchBar.setPromptText("City (required)");
+        stateSearchBar.setPromptText("State (optional, US only)");
+        countrySearchBar.setPromptText("Country (optional)");
         webEngineIcon = webViewIcon.getEngine();
         logoImg.setPreserveRatio(true);
         logoImg.setFitWidth(100);
+        searchButton.setDisable(true);
 
+        rightResult.setBackground(new Background(new BackgroundFill(Color.RED, CornerRadii.EMPTY, Insets.EMPTY)));
+        cityBox.setBackground(new Background(new BackgroundFill(Color.BLUE, CornerRadii.EMPTY, Insets.EMPTY)));
         // build hierarchy
-        leftMenu.getChildren()
-            .addAll(logo, directions, searchBar, searchButton);       
-        rightResult.getChildren().addAll(cityLabel, webViewIconBox, informationBox);
         root.getChildren().addAll(leftMenu, divider, rightResult);
+        HBox.setHgrow(rightResult, Priority.ALWAYS);
         
         leftMenu.setAlignment(Pos.CENTER);
-        rightResult.setAlignment(Pos.TOP_CENTER); 
+        rightResult.setAlignment(Pos.CENTER);
+        cityBox.setAlignment(Pos.CENTER);
         informationBox.setAlignment(Pos.TOP_CENTER);
         temperatureBox.setAlignment(Pos.BOTTOM_CENTER);
-
         webViewIconBox.setMaxSize(190, 190);
         VBox.setVgrow(webViewIconBox, Priority.ALWAYS);
         temperatureBox.setMaxHeight(temp.getHeight());
-        cityLabel.setPadding(new Insets(-10, 0, -20, 0));
-
-        /* 
-        rightResult.setBackground(new Background(new BackgroundFill(Color.BLUE, CornerRadii.EMPTY, Insets.EMPTY)));
-        webViewIconBox.setBackground(new Background(new BackgroundFill(Color.RED, CornerRadii.EMPTY, Insets.EMPTY)));
-        svgContent = readSvgContent("resources/openweathermap/01d.svg");
-        Platform.runLater(() -> webEngineIcon.loadContent(svgContent));    
-        temperatureBox.setBackground(new Background(new BackgroundFill(Color.GREEN, CornerRadii.EMPTY, Insets.EMPTY)));
-        */
-
+        cityBox.setMaxWidth(650);
+        //cityLabel.setPadding(new Insets(-20, 0, 0, 0));
+        HBox.setMargin(feelsLikeTemp, new Insets(0, 0, 10,0));
         // weather icon functionality
-        rightResult.setMinWidth(1280 - leftMenu.getWidth() - 200);        
         Platform.runLater(() -> webEngineIcon.setUserStyleSheetLocation("file:resources/style.css"));
+        this.getWeather(this.getCoordinates("Athens", "GA", "US"));
 
         // search button functionality
         EventHandler<ActionEvent> searchClicked = (ActionEvent e) -> {
-            this.getWeather(this.getCoordinates(searchBar.getText()));
+            String[] location = {citySearchBar.getText(), stateSearchBar.getText(), countrySearchBar.getText()};
+            this.getWeather(this.getCoordinates(location[0], location[1], location[2]));
         };
         searchButton.setOnAction(searchClicked);
 
+        // set listeners
+        citySearchBar.textProperty().addListener((observable, oldText, newText) -> {
+            if (oldText.equals("") && !newText.equals("")) {
+                searchButton.setDisable(false);
+            } else if (!oldText.equals("") && newText.equals("")) {
+                searchButton.setDisable(true);
+            }
+        });
     }
 
-    private double[] getCoordinates(String city) {
+    private double[] getCoordinates(String city, String state, String country) {
         city = URLEncoder.encode(city, StandardCharsets.UTF_8);
         String coordQuery = String.format("city=%s", city);
+        if (!state.trim().equals("")) {
+            state = URLEncoder.encode(state, StandardCharsets.UTF_8);
+            coordQuery += String.format("&state=%s", state);
+        }
+        if (!country.trim().equals("")) {
+            country = URLEncoder.encode(country, StandardCharsets.UTF_8);
+            coordQuery += String.format("&country=%s", country);
+        }
         String coordUri = "https://api.api-ninjas.com/v1/geocoding?" + coordQuery;
 
         try {
@@ -178,13 +199,14 @@ public class ApiApp extends Application {
             // send request & recieve response
             HttpResponse<String> response = HTTP_CLIENT.send(request, BodyHandlers.ofString());
             String jsonString = response.body();
+            System.out.println(jsonString);
             /**
-            * TODO: ensure request is ok 
-            */
+             * TODO: ensure request is ok 
+             */
             GeocodingResponse[] geocodingResponse = GSON.fromJson(jsonString, GeocodingResponse[].class);
             System.out.println(GSON.toJson(geocodingResponse[0]));
-            cityLabel.setText(geocodingResponse[0].name);
             cityLabel.setFont(new Font(75));
+            cityLabel.setText(geocodingResponse[0].name);
             double[] coordinates = {geocodingResponse[0].latitude, geocodingResponse[0].longitude};
             return coordinates;
         } catch (IllegalArgumentException | IOException | InterruptedException e) {
@@ -238,10 +260,11 @@ public class ApiApp extends Application {
     /** {@inheritDoc} */
     @Override
     public void start(Stage stage) {
+        System.out.println(rightResult.getPrefWidth());
         this.stage = stage;
     
         // setup scene
-        scene = new Scene(root, 1280, 720);
+        scene = new Scene(root, 1080, 720);
 
         // setup stage
         stage.setTitle("ApiApp!");      
@@ -274,4 +297,17 @@ public class ApiApp extends Application {
             return null;
         } // try
     }
+
+    /**
+     * Creates and immediately starts a new daemon thread that executes
+     * {@code target.run()}. This method, which may be called from any thread,
+     * will return immediately its the caller.
+     * @param target the object whose {@code run} method is invoked when this
+     *               thread is started
+     */
+    public static void runNow(Runnable target) {
+        Thread t = new Thread(target);
+        t.setDaemon(true);
+        t.start();
+    } // runNow
 } // ApiApp
