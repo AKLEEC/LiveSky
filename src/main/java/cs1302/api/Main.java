@@ -1,6 +1,14 @@
 package cs1302.api;
 
+import com.google.gson.annotations.SerializedName;
+
+/**
+ * This helper class is used for the weather object in
+ * the WeatherApiResponse class.
+ */
 public class Main {
     double temp;
-    double feels_like;
+
+    @SerializedName("feels_like")
+    double feelsLike;
 }

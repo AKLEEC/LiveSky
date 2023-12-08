@@ -269,7 +269,7 @@ public class ApiApp extends Application {
             temp.setFont(new Font(50));
             Platform.runLater(() -> {
                 feelsLikeTemp.setText(
-                    "feels like: " + (int)(Math.round(weatherResponse.main.feels_like)) + "°F");
+                    "feels like: " + (int)(Math.round(weatherResponse.main.feelsLike)) + "°F");
                 directions.setText("  Enter a city to see the current weather");
                 temp.setText((int)(Math.round(weatherResponse.main.temp)) + "°F");
                 webEngineIcon.loadContent(svgContent);
