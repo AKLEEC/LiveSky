@@ -40,7 +40,7 @@ import javafx.scene.web.WebView;
 import javafx.scene.web.WebEngine;
 
 /**
- * REPLACE WITH NON-SHOUTING DESCRIPTION OF YOUR APP.
+ * Weather app that shows the current weather based on user input.
  */
 public class ApiApp extends Application {
     /* HTTP Client */
@@ -176,7 +176,15 @@ public class ApiApp extends Application {
             }
         });
     }
-
+    
+    /**
+     * Gets the coordinates of a city, state, and country from API-Ninjas Geocoding API.
+     * 
+     * @param city user inputted
+     * @param state user inputted
+     * @param country user inputted
+     * @return an array of doubles containing the latitude and longitude of the city
+     */
     private double[] getCoordinates(String city, String state, String country) {
         city = URLEncoder.encode(city, StandardCharsets.UTF_8);
         String coordQuery = String.format("city=%s", city);
@@ -200,16 +208,14 @@ public class ApiApp extends Application {
             HttpResponse<String> response = HTTP_CLIENT.send(request, BodyHandlers.ofString());
             String jsonString = response.body();
             System.out.println(jsonString);
-            /**
-             * TODO: ensure request is ok
-             */
+            
             GeocodingResponse[] geocodingResponse = GSON.fromJson(jsonString, GeocodingResponse[].class);
             if (geocodingResponse.length == 0) {
                 throw new IllegalArgumentException("No results found");
             }
             System.out.println(GSON.toJson(geocodingResponse[0]));
-            Platform.runLater(() -> cityLabel.setText(geocodingResponse[0].name));
-            if (geocodingResponse[0].name.length() < 10) {
+            Platform.runLater(() -> cityLabel.setText(geocodingResponse[0].name + ", " + geocodingResponse[0].country));
+            if (geocodingResponse[0].name.length() < 15) {
                 cityLabel.setFont(new Font(75)); 
             } else {
                 cityLabel.setFont(new Font(40));
@@ -221,6 +227,11 @@ public class ApiApp extends Application {
         }
     } // getCoordinates
     
+    /**
+     * Gets the current weather of a city from OpenWeatherMap API.
+     * 
+     * @param coordinates an array of doubles containing the latitude and longitude of the city
+     */
     private void getWeather(double[] coordinates) {
         try {
             if (coordinates == null) {
@@ -240,9 +251,6 @@ public class ApiApp extends Application {
             // send request & recieve response
             HttpResponse<String> response = HTTP_CLIENT.send(request, BodyHandlers.ofString());
             String jsonString = response.body();
-            /**
-             * TODO: ensure request is ok 
-             */
 
             WeatherApiResponse weatherResponse = GSON.fromJson(jsonString, WeatherApiResponse.class);
             System.out.println(GSON.toJson(weatherResponse));
@@ -261,19 +269,21 @@ public class ApiApp extends Application {
             feelsLikeTemp.setFont(new Font(20));
             feelsLikeTemp.setOpacity(0.7);
         } catch (IllegalArgumentException | IOException | InterruptedException e) {
-            directions.setText("Last attempt to get weather failed...");
-            alertError(e);
+            Platform.runLater(() -> {
+                directions.setText("Last attempt to get weather failed...");
+                alertError(e);
+            });
         }
     }
     
     /** {@inheritDoc} */
     @Override
     public void start(Stage stage) {
-        System.out.println(rightResult.getPrefWidth());
         this.stage = stage;
-        
+        stage.setMaxWidth(1280);
+        stage.setMaxHeight(720);
         // setup scene
-        scene = new Scene(root, 1080, 650);
+        scene = new Scene(root, 1080, 600);
 
         // setup stage
         stage.setTitle("ApiApp!");      
@@ -307,6 +317,10 @@ public class ApiApp extends Application {
         alert.showAndWait();
     } // alertError
 
+    /**
+     * Returns an array of API keys from the config file.
+     * @return an array of API keys
+     */
     private static String[] getApiKeys() {
         try (FileInputStream configFileStream = new FileInputStream("resources/config.properties")) {
             Properties config = new Properties();
@@ -315,8 +329,6 @@ public class ApiApp extends Application {
             String weatherKey = config.getProperty("weather.apikey"); // get weather api key
             return new String[] {geocodingKey,weatherKey};
         } catch (IOException ioe) {
-            System.err.println(ioe);
-            ioe.printStackTrace();
             return null;
         } // try
     }

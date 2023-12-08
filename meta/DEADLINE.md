@@ -13,8 +13,9 @@ Markdown is transformed into nice-looking HTML.
 > in a meaningful way.
 
 > **Also, include the GitHub `https` URL to your repository.**
+This is the weather app that gives shows the current weather of a location based on the user input. The user have to input a city, then they can input a country and state if it is a US country for more specific results. The first API take the user input and returns the latitude and longitude, along with city name and country. The second API take the latitude and longitude to get the weather of that location.
 
-TODO WRITE / REPLACE
+https://github.com/AKLEEC/cs1302-api-app
 
 ## Part 1.2: APIs
 
@@ -28,29 +29,27 @@ TODO WRITE / REPLACE
 ### API 1
 
 ```
-https://.../replace/me
+https://api.api-ninjas.com/v1/geocoding?city=tokyo
 ```
 
-> Replace this line with notes (if needed) or remove it (if not needed).
+> include a header in HttpRequest: X-Api-Key=myApiKey
 
 ### API 2
 
 ```
-https://../replace/me
+https://api.openweathermap.org/data/2.5/weather?lat=50.234&lon=43.232&appid=myApiKey
 ```
-
-> Replace this line with notes (if needed) or remove it (if not needed).
 
 ## Part 2: New
 
 > What is something new and/or exciting that you learned from working
 > on this project?
 
-TODO WRITE / REPLACE
+I learned how to use resources to help me with the project instead of just my skills alone.
 
 ## Part 3: Retrospect
 
 > If you could start the project over from scratch, what do
 > you think might do differently and why?
 
-TODO WRITE / REPLACE
+At the beginning, I overestimated how APIs work because I thought that to implement 2 APIs, I would need to distinct function. But for example this weather API, it requires the latitude and longitude instead of typing in the city directly, so I need a helper API. So I should have fully grasp what a specific API need to do by doing more deeper research. Finding an API took me a week, but implementing it is very easy.
