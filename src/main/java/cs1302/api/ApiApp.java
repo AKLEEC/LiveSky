@@ -208,7 +208,7 @@ public class ApiApp extends Application {
                 throw new IllegalArgumentException("No results found");
             }
             System.out.println(GSON.toJson(geocodingResponse[0]));
-            cityLabel.setText(geocodingResponse[0].name);
+            Platform.runLater(() -> cityLabel.setText(geocodingResponse[0].name));
             if (geocodingResponse[0].name.length() < 10) {
                 cityLabel.setFont(new Font(75)); 
             } else {
@@ -248,16 +248,18 @@ public class ApiApp extends Application {
             System.out.println(GSON.toJson(weatherResponse));
             String icon = weatherResponse.weather[0].icon + ".svg";
             svgContent = readSvgContent("resources/openweathermap/" + icon);
-            Platform.runLater(() -> webEngineIcon.loadContent(svgContent));
-            tempDescription.setText(weatherResponse.weather[0].description);
             tempDescription.setFont(new Font("Comic Sans MS", 35));
             tempDescription.setOpacity(0.8);
-            temp.setText((int)(Math.round(weatherResponse.main.temp)) + "°F");
             temp.setFont(new Font(50));
-            feelsLikeTemp.setText("feels like: " + (int)(Math.round(weatherResponse.main.feels_like)) + "°F");
+            Platform.runLater(() -> {
+                feelsLikeTemp.setText("feels like: " + (int)(Math.round(weatherResponse.main.feels_like)) + "°F");
+                directions.setText("  Enter a city to see the current weather");
+                temp.setText((int)(Math.round(weatherResponse.main.temp)) + "°F");
+                webEngineIcon.loadContent(svgContent);
+                tempDescription.setText(weatherResponse.weather[0].description);
+            });
             feelsLikeTemp.setFont(new Font(20));
             feelsLikeTemp.setOpacity(0.7);
-            directions.setText("  Enter a city to see the current weather");
         } catch (IllegalArgumentException | IOException | InterruptedException e) {
             directions.setText("Last attempt to get weather failed...");
             alertError(e);
