@@ -53,7 +53,7 @@ public class ApiApp extends Application {
     public static Gson GSON = new GsonBuilder()
         .setPrettyPrinting()
         .create();
-    
+
     // top of heiarchy
     Stage stage;
     Scene scene;
@@ -108,7 +108,7 @@ public class ApiApp extends Application {
         cityBox = new HBox(cityLabel);
         webViewIcon = new WebView();
         webViewIconBox = new HBox(webViewIcon);
-        webViewIconBox.setAlignment(Pos.TOP_CENTER);        
+        webViewIconBox.setAlignment(Pos.TOP_CENTER);
         temp = new Label();
         feelsLikeTemp = new Label();
         temperatureBox = new HBox(8, temp, feelsLikeTemp);
@@ -125,7 +125,7 @@ public class ApiApp extends Application {
         directions.setWrapText(true);
         cityLabel.setWrapText(true);
         citySearchBar.setPromptText("City (required)");
-        stateSearchBar.setPromptText("State (available if country is \"US\")"); //"State (optional, US only)"
+        stateSearchBar.setPromptText("State (available if country is \"US\")");
         countrySearchBar.setPromptText("Country (optional - US)");
         webEngineIcon = webViewIcon.getEngine();
         logoImg.setPreserveRatio(true);
@@ -133,11 +133,11 @@ public class ApiApp extends Application {
         searchButton.setDisable(true);
 
         stateSearchBar.setDisable(true);
-        
+
         // build hierarchy
         root.getChildren().addAll(leftMenu, divider, rightResult);
         HBox.setHgrow(rightResult, Priority.ALWAYS);
-        
+
         leftMenu.setAlignment(Pos.CENTER);
         rightResult.setAlignment(Pos.CENTER);
         cityBox.setAlignment(Pos.CENTER);
@@ -148,14 +148,19 @@ public class ApiApp extends Application {
         temperatureBox.setMaxHeight(temp.getHeight());
         HBox.setMargin(feelsLikeTemp, new Insets(0, 0, 10,0));
         // weather icon functionality
-        Platform.runLater(() -> webEngineIcon.setUserStyleSheetLocation("file:resources/style.css"));
+        Platform.runLater(() -> {
+            webEngineIcon.setUserStyleSheetLocation("file:resources/style.css");
+        });
         this.getWeather(this.getCoordinates("Athens", "GA", "US"));
 
         // search button functionality
         EventHandler<ActionEvent> searchClicked = (ActionEvent e) -> {
             directions.setText("  Getting Results...");
-            String[] location = {citySearchBar.getText(), stateSearchBar.getText(), countrySearchBar.getText()};
-            runNow(() -> this.getWeather(this.getCoordinates(location[0], location[1], location[2])));
+            String[] location = {
+                citySearchBar.getText(), stateSearchBar.getText(), countrySearchBar.getText()
+            };
+            runNow(() -> this.getWeather(
+                this.getCoordinates(location[0], location[1], location[2])));
         };
         searchButton.setOnAction(searchClicked);
 
@@ -176,10 +181,10 @@ public class ApiApp extends Application {
             }
         });
     }
-    
+
     /**
      * Gets the coordinates of a city, state, and country from API-Ninjas Geocoding API.
-     * 
+     *
      * @param city user inputted
      * @param state user inputted
      * @param country user inputted
@@ -202,23 +207,25 @@ public class ApiApp extends Application {
             HttpRequest request = HttpRequest.newBuilder()
                 .header("X-Api-Key", getApiKeys()[0])
                 .uri(URI.create(coordUri))
-                .build();    
-            
+                .build();
+
             // send request & recieve response
             HttpResponse<String> response = HTTP_CLIENT.send(request, BodyHandlers.ofString());
             String jsonString = response.body();
-            System.out.println(jsonString);
-            
-            GeocodingResponse[] geocodingResponse = GSON.fromJson(jsonString, GeocodingResponse[].class);
+
+            GeocodingResponse[] geocodingResponse = GSON.fromJson(
+                jsonString, GeocodingResponse[].class);
             if (geocodingResponse.length == 0) {
                 throw new IllegalArgumentException("No results found");
             }
-            System.out.println(GSON.toJson(geocodingResponse[0]));
-            Platform.runLater(() -> cityLabel.setText(geocodingResponse[0].name + ", " + geocodingResponse[0].country));
+
+            Platform.runLater(() -> {
+                cityLabel.setText(geocodingResponse[0].name + ", " + geocodingResponse[0].country);
+            });
             if (geocodingResponse[0].name.length() < 15) {
-                cityLabel.setFont(new Font(75)); 
+                cityLabel.setFont(new Font(50));
             } else {
-                cityLabel.setFont(new Font(40));
+                cityLabel.setFont(new Font(25));
             }
             double[] coordinates = {geocodingResponse[0].latitude, geocodingResponse[0].longitude};
             return coordinates;
@@ -226,10 +233,10 @@ public class ApiApp extends Application {
             return null;
         }
     } // getCoordinates
-    
+
     /**
      * Gets the current weather of a city from OpenWeatherMap API.
-     * 
+     *
      * @param coordinates an array of doubles containing the latitude and longitude of the city
      */
     private void getWeather(double[] coordinates) {
@@ -241,26 +248,28 @@ public class ApiApp extends Application {
             String longitude = URLEncoder.encode("" + coordinates[1], StandardCharsets.UTF_8);
             String units = URLEncoder.encode("imperial", StandardCharsets.UTF_8);
             String apiKey = getApiKeys()[1];
-            String coordQuery = String.format("lat=%s&lon=%s&appid=%s&units=%s", latitude, longitude, apiKey, units);
+            String coordQuery = String.format(
+                "lat=%s&lon=%s&appid=%s&units=%s", latitude, longitude, apiKey, units);
             String coordUri = "https://api.openweathermap.org/data/2.5/weather?" + coordQuery;
             // build request
             HttpRequest request = HttpRequest.newBuilder()
                 .uri(URI.create(coordUri))
-                .build();    
-            
+                .build();
+
             // send request & recieve response
             HttpResponse<String> response = HTTP_CLIENT.send(request, BodyHandlers.ofString());
             String jsonString = response.body();
 
-            WeatherApiResponse weatherResponse = GSON.fromJson(jsonString, WeatherApiResponse.class);
-            System.out.println(GSON.toJson(weatherResponse));
+            WeatherApiResponse weatherResponse = GSON.fromJson(
+                jsonString, WeatherApiResponse.class);
             String icon = weatherResponse.weather[0].icon + ".svg";
             svgContent = readSvgContent("resources/openweathermap/" + icon);
             tempDescription.setFont(new Font("Comic Sans MS", 35));
             tempDescription.setOpacity(0.8);
             temp.setFont(new Font(50));
             Platform.runLater(() -> {
-                feelsLikeTemp.setText("feels like: " + (int)(Math.round(weatherResponse.main.feels_like)) + "°F");
+                feelsLikeTemp.setText(
+                    "feels like: " + (int)(Math.round(weatherResponse.main.feels_like)) + "°F");
                 directions.setText("  Enter a city to see the current weather");
                 temp.setText((int)(Math.round(weatherResponse.main.temp)) + "°F");
                 webEngineIcon.loadContent(svgContent);
@@ -275,7 +284,7 @@ public class ApiApp extends Application {
             });
         }
     }
-    
+
     /** {@inheritDoc} */
     @Override
     public void start(Stage stage) {
@@ -286,7 +295,7 @@ public class ApiApp extends Application {
         scene = new Scene(root, 1080, 600);
 
         // setup stage
-        stage.setTitle("ApiApp!");      
+        stage.setTitle("ApiApp!");
         stage.setScene(scene);
         stage.setOnCloseRequest(event -> Platform.exit());
         stage.sizeToScene();
@@ -294,6 +303,11 @@ public class ApiApp extends Application {
         Platform.runLater(() -> this.stage.setResizable(false));
     } // start
 
+    /**
+     * Read the svg files as bytes to show animations in the app.
+     * @param filePath the file path to the svg file
+     * @return string of bytes
+     */
     private String readSvgContent(String filePath) {
         try {
             return new String(Files.readAllBytes(Paths.get(filePath)));
@@ -322,9 +336,9 @@ public class ApiApp extends Application {
      * @return an array of API keys
      */
     private static String[] getApiKeys() {
-        try (FileInputStream configFileStream = new FileInputStream("resources/config.properties")) {
+        try (FileInputStream configFileStrea = new FileInputStream("resources/config.properties")) {
             Properties config = new Properties();
-            config.load(configFileStream);
+            config.load(configFileStrea);
             String geocodingKey = config.getProperty("geocoding.apikey"); // get geocoding api key
             String weatherKey = config.getProperty("weather.apikey"); // get weather api key
             return new String[] {geocodingKey,weatherKey};
